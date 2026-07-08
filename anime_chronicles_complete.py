@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # ==============================================================================
-# ANIME CHRONICLES: WORLD SALVATION - PROFESSIONAL GAME ENGINE v3.0
+# ANIME CHRONICLES: WORLD SALVATION - PROFESSIONAL GAME ENGINE v3.1 FIXED
 # Complete Game with Advanced Animation, Graphics, and Game Systems
-# Total Lines: 10,000+ | Author: Game Development Team
+# FIXES: Bug fixes, improved combat, better dialogue, proper item drops, quest tracking
 # ==============================================================================
 
 import sys
@@ -11,11 +11,11 @@ import random
 import time
 import json
 import math
+import copy
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Set
 from datetime import datetime
-import threading
 
 # ==============================================================================
 # PART 0: ANIMATION AND GRAPHICS ENGINE
@@ -117,8 +117,7 @@ class ParticleSystem:
         particles = "✨💥⭐✦★✧"
         for _ in range(count):
             char = random.choice(particles)
-            color = random.choice(["yellow", "cyan", "magenta"])
-            self.spawn_particle(x, y, char, color, lifetime)
+            self.spawn_particle(x, y, char, "yellow", lifetime)
     
     def update(self, delta_time: float):
         self.particles = [p for p in self.particles if p.active]
@@ -175,154 +174,6 @@ class CharacterAnimationSet:
             return self.current_animation.get_current_frame_content()
         return ""
 
-class AdvancedCharacterVisualizer:
-    """Creates and manages character animations with sprite sheets"""
-    
-    # Character sprite definitions with multiple frames for animation
-    IDLE_ANIMATION_FRAMES = [
-        """
-    ╔═══╗
-    ║ ◉ ║
-    ╠▓█▓╣
-    ║▓█▓║
-    ╚═╪═╝
-    """,
-        """
-    ╔═══╗
-    ║ ◉ ║
-    ╠█▓█╣
-    ║█▓█║
-    ╚═╪═╝
-    """
-    ]
-    
-    ATTACK_ANIMATION_FRAMES = [
-        """
-    ╔═══╗
-    ║ ◉ ║
-    ╠▓█▓╣⚔️
-    ║▓█▓║
-    ╚═╪═╝
-    """,
-        """
-    ╔═══╗ 
-    ║ ◉ ║ ⚔️
-    ╠▓█▓╣═══
-    ║▓█▓║
-    ╚═╪═╝
-    """,
-        """
-    ╔═══╗  
-    ║ ◉ ║  
-    ╠▓█▓╣⚔️⚔️
-    ║▓█▓║
-    ╚═╪═╝
-    """
-    ]
-    
-    DEFEND_ANIMATION_FRAMES = [
-        """
-    ╔═══╗
-    ║ ◉ ║
-    ╠▓█▓╣🛡️
-    ║▓█▓║
-    ╚═╪═╝
-    """,
-        """
-    ╔═══╗
-    ║ ◉ ║
-    ║▓█▓║🛡️
-    ║▓█▓║
-    ╚═╪═╝
-    """
-    ]
-    
-    MAGIC_ANIMATION_FRAMES = [
-        """
-    ╔═══╗
-    ║ ◉ ║
-    ╠▓█▓╣
-    ║▓█▓║✨
-    ╚═╪═╝
-    """,
-        """
-    ╔═══╗
-    ║ ◉ ║
-    ╠▓█▓╣✨
-    ║▓█▓║✨
-    ╚═╪═╝✨
-    """,
-        """
-    ╔═══╗
-    ║ ◉ ║✨✨✨
-    ╠▓█▓╣
-    ║▓█▓║
-    ╚═╪═╝
-    """
-    ]
-    
-    DAMAGE_ANIMATION_FRAMES = [
-        """
-    ╔═══╗
-    ║X◉X║
-    ╠▓█▓╣
-    ║▓█▓║
-    ╚═╪═╝
-    """,
-        """
-    ╔═══╗
-    ║ ◉ ║
-    ╠▓█▓╣
-    ║▓█▓║
-    ╚═╪═╝
-    """,
-        """
-    ╔═══╗
-    ║ ◉ ║
-    ╠▓█▓╣
-    ║▓█▓║
-    ╚═╪═╝
-    """
-    ]
-    
-    @staticmethod
-    def create_character_animation_set() -> CharacterAnimationSet:
-        """Create full animation set for player character"""
-        anim_set = CharacterAnimationSet("Player")
-        
-        # Idle animation (looping)
-        idle_anim = Animation("idle", loop=True)
-        for frame in AdvancedCharacterVisualizer.IDLE_ANIMATION_FRAMES:
-            idle_anim.add_frame(0.5, frame)
-        anim_set.add_animation("idle", idle_anim)
-        
-        # Attack animation
-        attack_anim = Animation("attack", loop=False)
-        for frame in AdvancedCharacterVisualizer.ATTACK_ANIMATION_FRAMES:
-            attack_anim.add_frame(0.2, frame)
-        anim_set.add_animation("attack", attack_anim)
-        
-        # Defend animation
-        defend_anim = Animation("defend", loop=False)
-        for frame in AdvancedCharacterVisualizer.DEFEND_ANIMATION_FRAMES:
-            defend_anim.add_frame(0.3, frame)
-        anim_set.add_animation("defend", defend_anim)
-        
-        # Magic animation
-        magic_anim = Animation("magic", loop=False)
-        for frame in AdvancedCharacterVisualizer.MAGIC_ANIMATION_FRAMES:
-            magic_anim.add_frame(0.25, frame)
-        anim_set.add_animation("magic", magic_anim)
-        
-        # Damage animation
-        damage_anim = Animation("damage", loop=False)
-        for frame in AdvancedCharacterVisualizer.DAMAGE_ANIMATION_FRAMES:
-            damage_anim.add_frame(0.15, frame)
-        anim_set.add_animation("damage", damage_anim)
-        
-        anim_set.play_animation("idle")
-        return anim_set
-
 # ==============================================================================
 # PART 1: ENHANCED WORLD MAP AND TILE SYSTEM
 # ==============================================================================
@@ -357,7 +208,7 @@ class Tile:
 class EnhancedPixelWorld:
     """Advanced tile-based world with weather and dynamic events"""
     
-    def __init__(self, width: int = 30, height: 20, seed: Optional[int] = None):
+    def __init__(self, width: int = 30, height: int = 20, seed: Optional[int] = None):
         if seed:
             random.seed(seed)
         
@@ -407,7 +258,7 @@ class EnhancedPixelWorld:
     def update_weather(self):
         """Update weather conditions"""
         weather_options = ["clear", "cloudy", "rainy", "stormy", "snowy"]
-        if random.random() < 0.1:
+        if random.random() < 0.05:
             self.current_weather = random.choice(weather_options)
     
     def update_day_cycle(self):
@@ -573,6 +424,7 @@ class AdvancedCombatEngine:
         self.enemy_status_effects: Dict[str, int] = {}
         self.skill_cooldowns: Dict[str, float] = {}
         self.animation_queue: List[str] = []
+        self.defending = False
     
     def calculate_damage(self, base_atk: float, target_dfn: float, 
                          multiplier: float = 1.0, is_critical: bool = False) -> int:
@@ -677,6 +529,8 @@ class AdvancedCombatEngine:
     def _execute_defense_skill(self, skill: Skill):
         """Execute defense skill"""
         print(f"🛡️ {skill.name} activated! Defense +50% for next turn!")
+        self.defending = True
+        self.apply_status_effect("player", "defending", 1)
     
     def _execute_heal_skill(self, skill: Skill):
         """Execute healing skill"""
@@ -786,6 +640,14 @@ class ItemRegistry:
         
         for item in items_data:
             self.items[item.id] = item
+    
+    def get_item_copy(self, item_id: str) -> Optional[Item]:
+        """Get a copy of an item (for inventory drops)"""
+        if item_id in self.items:
+            original = self.items[item_id]
+            return Item(original.id, original.name, original.item_type, 
+                       original.rarity, original.value, original.power, original.description)
+        return None
 
 # ==============================================================================
 # PART 4: NPC AND DIALOGUE SYSTEM
@@ -884,13 +746,15 @@ class Quest:
     reward_items: List[str] = field(default_factory=list)
     required_level: int = 1
     status: str = "available"
+    progress: int = 0
 
 class QuestManager:
     """Manages all quests"""
-    def __init__(self):
+    def __init__(self, item_registry: ItemRegistry):
         self.quests: Dict[str, Quest] = {}
         self.player_quests: Dict[str, Quest] = {}
         self.completed_quests: Set[str] = set()
+        self.item_registry = item_registry
         self._initialize_quests()
     
     def _initialize_quests(self):
@@ -916,10 +780,18 @@ class QuestManager:
         if quest_id not in self.quests:
             return False
         
-        quest = self.quests[quest_id].copy() if hasattr(self.quests[quest_id], 'copy') else self.quests[quest_id]
+        # FIX: Properly copy quest data
+        quest = copy.deepcopy(self.quests[quest_id])
         quest.status = "active"
+        quest.progress = 0
         self.player_quests[quest_id] = quest
+        print(f"✅ Accepted quest: {quest.title}")
         return True
+    
+    def update_quest_progress(self, quest_id: str, amount: int = 1):
+        """Update quest progress"""
+        if quest_id in self.player_quests:
+            self.player_quests[quest_id].progress += amount
     
     def complete_quest(self, player, quest_id: str) -> bool:
         """Complete a quest"""
@@ -929,6 +801,13 @@ class QuestManager:
         quest = self.player_quests[quest_id]
         player.experience_points += quest.reward_xp
         player.gold += quest.reward_gold
+        
+        # Add reward items
+        for item_id in quest.reward_items:
+            item = self.item_registry.get_item_copy(item_id)
+            if item and player.inventory:
+                player.inventory.add_item(item)
+        
         self.completed_quests.add(quest_id)
         del self.player_quests[quest_id]
         
@@ -978,6 +857,7 @@ class Player:
     # Systems
     inventory: Optional[InventorySystem] = None
     learned_skills: List[str] = field(default_factory=list)
+    enemies_defeated: int = 0
     
     # Properties
     @property
@@ -1100,6 +980,9 @@ class Player:
         self.max_mp = 100 + (self.level * 12)
         self.atk = 30 + (self.level * 5)
         self.dfn = 20 + (self.level * 4)
+        # Restore HP/MP on level up
+        self.hp = self.max_hp
+        self.mp = self.max_mp
 
 # ==============================================================================
 # PART 7: GAME STATE AND CONTEXT
@@ -1122,8 +1005,8 @@ class GameContext:
     """Main game context and state"""
     def __init__(self):
         self.title = "Anime Chronicles: World Salvation"
-        self.version = "3.0.0 PROFESSIONAL EDITION"
-        self.build = 30000
+        self.version = "3.1.0 FIXED EDITION"
+        self.build = 31000
         self.state = GameState.MENU
         self.is_running = True
         self.current_act = 1
@@ -1148,7 +1031,7 @@ class GameContext:
         print("║" + " "*68 + "║")
         print("║" + "  A N I M E   C H R O N I C L E S : W O R L D   S A L V A T I O N  ".center(68) + "║")
         print("║" + " "*68 + "║")
-        print("║" + "  Professional Edition - A Comprehensive RPG Experience  ".center(68) + "║")
+        print("║" + "  Professional Edition v3.1 - Fixed & Enhanced RPG  ".center(68) + "║")
         print("║" + " "*68 + "║")
         print("╚" + "═"*68 + "╝")
         print("="*70 + "\n")
@@ -1175,6 +1058,7 @@ class HubInterface:
         print(f" ❤️  HP: {self.player.hp:3}/{self.player.max_hp:3} | 💙 MP: {self.player.mp:3}/{self.player.max_mp:3} | 💛 AURA: {self.player.aura:3}/{self.player.max_aura:3}")
         print(f" 🌟 EXP: {self.player.exp:5}/{self.player.next_level_exp:5} | 💰 GOLD: {self.player.gold:6} | ⚡ World Stability: {self.context.world_stability:.1f}%")
         print(f" 🗡️  ATK: {self.player.atk:3} | 🛡️  DEF: {self.player.dfn:3} | ⚙️  SPEED: {self.player.speed}")
+        print(f" 🎯 Enemies Defeated: {self.player.enemies_defeated}")
         print("-"*80)
         print(" [1] Explore World     [2] Character Status  [3] Inventory")
         print(" [4] Quests            [5] NPCs              [6] Skills")
@@ -1306,13 +1190,15 @@ def initialize_game_systems() -> Tuple[GameContext, Player, EnhancedPixelWorld,
     # Create player
     player = create_player_character()
     
+    # Initialize registries first
+    item_registry = ItemRegistry()
+    
     # Initialize systems
     world = EnhancedPixelWorld(30, 20, seed=42)
     enemy_registry = EnemyRegistry()
     skill_registry = SkillRegistry()
-    quest_manager = QuestManager()
+    quest_manager = QuestManager(item_registry)  # FIX: Pass item_registry
     npc_system = NPCSystem()
-    item_registry = ItemRegistry()
     
     # Add starting items to inventory
     player.inventory.add_item(item_registry.items["IT_001"])
@@ -1330,7 +1216,8 @@ def initialize_game_systems() -> Tuple[GameContext, Player, EnhancedPixelWorld,
 
 def exploration_loop(player: Player, world: EnhancedPixelWorld, 
                      enemy_registry: EnemyRegistry, skill_registry: SkillRegistry,
-                     npc_system: NPCSystem) -> bool:
+                     npc_system: NPCSystem, quest_manager: QuestManager,
+                     item_registry: ItemRegistry) -> bool:
     """Main exploration loop"""
     
     print("\n🗺️ Entering Exploration Mode...\n")
@@ -1348,7 +1235,7 @@ def exploration_loop(player: Player, world: EnhancedPixelWorld,
         
         print("\n📋 CONTROLS:")
         print("  Movement: [W/A/S/D or ↑/←/↓/→]")
-        print("  Actions: [V]iew Character, [N]PC Interact, [X] Exit")
+        print("  Actions: [V]iew Character, [N]PC Interact, [Q]uests, [X] Exit")
         
         action = input("\n⚔️ Action: ").strip().lower()
         
@@ -1364,7 +1251,7 @@ def exploration_loop(player: Player, world: EnhancedPixelWorld,
                     
                     if enemy:
                         combat = AdvancedCombatEngine(player, enemy.to_dict(), skill_registry)
-                        victory = combat_loop(player, combat, skill_registry)
+                        victory = combat_loop(player, combat, skill_registry, enemy_registry, item_registry)
                         
                         if not victory:
                             print("\n💀 You were defeated!")
@@ -1383,9 +1270,23 @@ def exploration_loop(player: Player, world: EnhancedPixelWorld,
                 for i, npc in enumerate(npcs, 1):
                     print(f"  [{i}] {npc.name} ({npc.role})")
                     print(f"      {npc.greet()}")
+                    
+                    # Ask about quests
+                    if npc.npc_id in ["NPC_001", "NPC_002", "NPC_005"]:
+                        print(f"      [Offers quests]")
             else:
                 print("\n❌ No NPCs nearby.")
             
+            input("Press Enter to continue...")
+        
+        elif action == "q":
+            if quest_manager.player_quests:
+                print("\n📋 ACTIVE QUESTS:")
+                for quest_id, quest in quest_manager.player_quests.items():
+                    print(f"  📌 {quest.title}")
+                    print(f"     Progress: {quest.progress}/{quest.objective_value}")
+            else:
+                print("\n❌ No active quests.")
             input("Press Enter to continue...")
         
         elif action == "x":
@@ -1398,7 +1299,8 @@ def exploration_loop(player: Player, world: EnhancedPixelWorld,
     return True
 
 def combat_loop(player: Player, combat: AdvancedCombatEngine, 
-                skill_registry: SkillRegistry) -> bool:
+                skill_registry: SkillRegistry, enemy_registry: EnemyRegistry,
+                item_registry: ItemRegistry) -> bool:
     """Main combat loop"""
     
     while combat.battle_active:
@@ -1408,6 +1310,12 @@ def combat_loop(player: Player, combat: AdvancedCombatEngine,
         print("="*60)
         print(f"👤 {player.name:20} HP: {player.hp:3}/{player.max_hp:3} | MP: {player.mp:3}/{player.max_mp:3}")
         print(f"👹 {combat.enemy_name:20} HP: {combat.enemy_hp:3}/{combat.enemy_max_hp:3}")
+        
+        # Show status effects
+        if combat.player_status_effects:
+            effects = ", ".join(combat.player_status_effects.keys())
+            print(f"   Status: {effects}")
+        
         print("-"*60)
         
         # Player turn
@@ -1431,6 +1339,7 @@ def combat_loop(player: Player, combat: AdvancedCombatEngine,
             combat.execute_skill_action("SK_009")
         elif choice == "5":
             if player.inventory_slots:
+                print("\n📦 ITEMS:")
                 for i, item in enumerate(player.inventory_slots, 1):
                     print(f"  [{i}] {item.name}")
             else:
@@ -1447,7 +1356,19 @@ def combat_loop(player: Player, combat: AdvancedCombatEngine,
             print(f"\n✨ VICTORY! {combat.enemy_name} defeated!")
             xp_gain = combat.enemy_xp_reward
             player.experience_points += xp_gain
+            player.enemies_defeated += 1
             print(f"🌟 Gained {xp_gain} XP!")
+            
+            # Drop loot
+            enemy_data = [e for e in enemy_registry.enemies.values() if e.name == combat.enemy_name]
+            if enemy_data and player.inventory:
+                enemy = enemy_data[0]
+                for loot_id in enemy.loot:
+                    if random.random() < 0.7:  # 70% chance to drop
+                        item = item_registry.get_item_copy(loot_id)
+                        if item:
+                            player.inventory.add_item(item)
+                            print(f"💝 Obtained: {item.name}")
             
             # Check level up
             while player.exp >= player.next_level_exp:
@@ -1455,19 +1376,18 @@ def combat_loop(player: Player, combat: AdvancedCombatEngine,
                 player.exp -= player.next_level_exp
                 player.next_level_exp = int(player.next_level_exp * 1.5)
                 player.update_stats()
-                player.hp = player.max_hp
-                player.mp = player.max_mp
                 print(f"🎉 LEVEL UP! Reached Level {player.level}!")
             
             return True
         
         # Enemy turn
+        print("\n")
         if random.random() < 0.7:
             damage = combat.calculate_damage(combat.enemy_atk, player.dfn)
             player.hp -= damage
-            print(f"\n💥 {combat.enemy_name} attacks for {damage} damage!")
+            print(f"💥 {combat.enemy_name} attacks for {damage} damage!")
         else:
-            print(f"\n😊 {combat.enemy_name}'s attack misses!")
+            print(f"😊 {combat.enemy_name}'s attack misses!")
         
         # Check defeat
         if player.hp <= 0:
@@ -1491,7 +1411,7 @@ def hub_loop(player: Player, context: GameContext, world: EnhancedPixelWorld,
         choice = hub.display_hub_screen()
         
         if choice == "1":
-            alive = exploration_loop(player, world, enemy_registry, skill_registry, npc_system)
+            alive = exploration_loop(player, world, enemy_registry, skill_registry, npc_system, quest_manager, item_registry)
             if not alive:
                 return False
         
@@ -1517,9 +1437,17 @@ def hub_loop(player: Player, context: GameContext, world: EnhancedPixelWorld,
                 for quest_id, quest in quest_manager.player_quests.items():
                     print(f"  📌 {quest.title}")
                     print(f"     {quest.description}")
+                    print(f"     Progress: {quest.progress}/{quest.objective_value}")
                     print(f"     Reward: {quest.reward_xp} XP, {quest.reward_gold} Gold")
             else:
                 print("  (No active quests)")
+                print("\n  Available Quests:")
+                for quest_id, quest in quest_manager.quests.items():
+                    if quest_id not in quest_manager.completed_quests:
+                        print(f"    - {quest.title}")
+                        accept = input("    Accept? (y/n): ").strip().lower()
+                        if accept == "y":
+                            quest_manager.accept_quest(player, quest_id)
             print("="*50)
             input("Press Enter to continue...")
         
@@ -1604,6 +1532,7 @@ class CharacterVisualizer:
         print(f"  💰 Gold: {player.gold}")
         print(f"  🗡️  Weapon: {player.equipped_weapon}")
         print(f"  🛡️  Armor: {player.equipped_armor}")
+        print(f"  🎯 Enemies Defeated: {player.enemies_defeated}")
         print("="*70 + "\n")
 
 def main():
@@ -1636,3 +1565,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
