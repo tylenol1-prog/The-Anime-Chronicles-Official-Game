@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ==============================================================================
 # ANIME CHRONICLES: WORLD SALVATION SYSTEM
-# MAIN GAME ENGINE - Orchestrates all game systems
+# MAIN GAME ENGINE WITH CHARACTER VISUALIZATION
 # ==============================================================================
 
 import sys
@@ -10,14 +10,149 @@ import random
 import time
 
 # ============================================================================
-# PART 1: GAME CORE AND REGISTRATION SYSTEMS
+# PART 0: CHARACTER VISUALIZATION SYSTEM
+# ============================================================================
+
+class CharacterVisualizer:
+    """Renders the player character as ASCII art"""
+    
+    RED_SUIT_CHARACTER = [
+        "    🧑    ",
+        "   ╱█╲   ",
+        "   █ █   ",
+        "   ╲█╱   ",
+        "    ║    ",
+        "   ╱ ╲   ",
+    ]
+    
+    RED_SUIT_CHARACTER_SPRITE = [
+        "   ╔═╗   ",
+        "   ║O║   ",
+        "  ╔╩█╩╗  ",
+        "  ║ █ ║  ",
+        "  ╚═╪═╝  ",
+        "   ╱ ╲   ",
+    ]
+    
+    DETAILED_CHARACTER = [
+        "    ◉     ",
+        "   ╱▓╲    ",
+        "   ▓▓▓▓   ",
+        "  ╱▓███╲  ",
+        "  ║ ▓▓▓ ║ ",
+        "  ╚═╪═╪═╝ ",
+        "   ╱ ╲    ",
+        "  ▓   ▓   ",
+    ]
+    
+    @staticmethod
+    def render_character():
+        """Return ASCII art of red-suited character"""
+        return CharacterVisualizer.RED_SUIT_CHARACTER_SPRITE
+    
+    @staticmethod
+    def display_character_full(player):
+        """Display full character status with visual"""
+        print("\n" + "="*50)
+        print("            YOUR CHARACTER")
+        print("="*50)
+        
+        for line in CharacterVisualizer.render_character():
+            print(line)
+        
+        print("-"*50)
+        print(f"  Name: {player.player_name}")
+        print(f"  Class: {player.chosen_class}")
+        print(f"  Weapon: {player.equipped_weapon}")
+        print(f"  Armor: {player.equipped_armor}")
+        print("="*50 + "\n")
+
+# ============================================================================
+# PART 1: WORLD MAP AND MOVEMENT SYSTEM
+# ============================================================================
+
+class PixelWorld:
+    """2D tile-based world with character movement"""
+    
+    def __init__(self, width=20, height=15):
+        self.width = width
+        self.height = height
+        self.player_x = width // 2
+        self.player_y = height // 2
+        self.tiles = {}
+        self.generate_world()
+        self.visited_zones = set()
+    
+    def generate_world(self):
+        """Generate random world terrain"""
+        for y in range(self.height):
+            for x in range(self.width):
+                rand = random.random()
+                if rand < 0.1:
+                    self.tiles[(x, y)] = "🌲"  # Forest
+                elif rand < 0.15:
+                    self.tiles[(x, y)] = "🏔"   # Mountain
+                elif rand < 0.2:
+                    self.tiles[(x, y)] = "💧"   # Water
+                elif rand < 0.25:
+                    self.tiles[(x, y)] = "🏛"   # Ruins
+                else:
+                    self.tiles[(x, y)] = "·"    # Grass
+    
+    def draw(self):
+        """Render the game world with player character"""
+        print("\n" + "╔" + "═" * (self.width * 2 - 1) + "╗")
+        
+        for y in range(self.height):
+            print("║", end="")
+            for x in range(self.width):
+                if x == self.player_x and y == self.player_y:
+                    print("🔴", end="")  # Red character/suit indicator
+                else:
+                    tile = self.tiles.get((x, y), "·")
+                    print(tile, end="")
+            print("║")
+        
+        print("╚" + "═" * (self.width * 2 - 1) + "╝")
+        print(f"Position: ({self.player_x}, {self.player_y}) | Map: {self.width}x{self.height}")
+    
+    def move(self, direction):
+        """Move player in specified direction"""
+        old_x, old_y = self.player_x, self.player_y
+        
+        if direction == "w" or direction == "↑":
+            self.player_y = max(0, self.player_y - 1)
+        elif direction == "s" or direction == "↓":
+            self.player_y = min(self.height - 1, self.player_y + 1)
+        elif direction == "a" or direction == "←":
+            self.player_x = max(0, self.player_x - 1)
+        elif direction == "d" or direction == "→":
+            self.player_x = min(self.width - 1, self.player_x + 1)
+        
+        moved = (old_x != self.player_x or old_y != self.player_y)
+        return moved
+    
+    def get_terrain_description(self):
+        """Get description of current terrain"""
+        terrain = self.tiles.get((self.player_x, self.player_y), "·")
+        descriptions = {
+            "🌲": "You stand in a dense forest. Shadows dance between the trees.",
+            "🏔": "Towering mountains loom overhead. A cold wind blows through.",
+            "💧": "You wade through water. Something moves beneath the surface...",
+            "🏛": "Ancient ruins surround you. A sense of history fills the air.",
+            "·": "Grassland stretches endlessly. The path ahead is clear."
+        }
+        return descriptions.get(terrain, "You are in an unknown location.")
+
+# ============================================================================
+# PART 2: GAME CORE AND REGISTRATION SYSTEMS
 # ============================================================================
 
 class GameContext:
     def __init__(self):
         self.game_title = "Anime Chronicles: World Salvation"
-        self.version = "1.0.0"
-        self.build_number = 10042
+        self.version = "2.5.0 CHARACTER EDITION"
+        self.build_number = 10250
         self.max_lines_target = 10000
         self.is_running = True
         self.system_ready = False
@@ -26,12 +161,12 @@ class GameContext:
         self.cataclysm_countdown_hours = 24
         
     def display_boot_logo(self):
-        print("======================================================================")
-        print("     A N I M E   C H R O N I C L E S :   W O R L D   S A L V A T I O N")
-        print("======================================================================")
-        print(f" System Version: {self.version} | Build: {self.build_number} | Lines Matrix: {self.max_lines_target}")
-        print(" Loading core multi-verse memory buffers...")
-        print("----------------------------------------------------------------------")
+        print("╔════════════════════════════════════════════════════════════════╗")
+        print("║     A N I M E   C H R O N I C L E S : W O R L D   S A L V A T I O N  ║")
+        print("╠════════════════════════════════════════════════════════════════╣")
+        print(f"║ System Version: {self.version:<30} Build: {self.build_number:<6} ║")
+        print("║ Loading character visualization systems...                     ║")
+        print("╚════════════════════════════════════════════════════════════════╝")
 
 class SystemLogger:
     def __init__(self, context):
@@ -74,8 +209,8 @@ class PlayerDataStructure:
         self.speed_stat = 15
         self.luck_stat = 10
         self.crit_chance = 0.05
-        self.equipped_weapon = "None"
-        self.equipped_armor = "None"
+        self.equipped_weapon = "Red Leather Fists"
+        self.equipped_armor = "Crimson Business Suit"
         self.inventory_slots = []
         self.unlocked_skills = []
         self.quest_flags = {}
@@ -128,7 +263,7 @@ class ZoneRegistry:
         }
 
 # ============================================================================
-# PART 2: COMBAT ENGINE
+# PART 3: COMBAT ENGINE
 # ============================================================================
 
 class CombatEngine:
@@ -158,13 +293,13 @@ class CombatEngine:
         print(f"\n--- TURN {self.turn_counter} : {self.player.player_name}'s Action Phase ---")
         print(f"[{self.player.player_name}] HP: {self.player.health_points}/{self.player.maximum_health_points} | MP: {self.player.mana_points}/{self.player.maximum_mana_points}")
         print(f"[{self.enemy_name}] HP: {self.enemy_hp}/{self.enemy_max_hp} (Lv.{self.enemy_level})")
-        print("\nBattle Menu Mechanics:")
-        print("1) Slash Strike      - Standard physical blow. Generates 5 Aura Energy.")
-        print("2) Special Anime Burst - Cast unlocked specialized high-potency techniques.")
-        print("3) Tactical Guard   - Half incoming enemy strike values for the next round.")
-        print("4) Open Item Satchel - Access and consume restorable inventory parameters.")
+        print("\nBattle Menu:")
+        print("1) Slash Strike      - Standard physical blow")
+        print("2) Special Technique - High-potency attack")
+        print("3) Tactical Guard    - Reduce incoming damage")
+        print("4) Use Item          - Access inventory")
         
-        choice = input("Select strategic maneuver (1-4): ").strip()
+        choice = input("Select action (1-4): ").strip()
         self.player_defense_buff = False
 
         if choice == "1":
@@ -172,50 +307,41 @@ class CombatEngine:
             dmg = self.calculate_damage_output(self.player.base_attack_power, self.enemy_dfn, is_crit)
             self.enemy_hp -= dmg
             self.player.aura_energy = min(self.player.maximum_aura_energy, self.player.aura_energy + 5)
-            print(f"⚔️ You strike {self.enemy_name} for {dmg} damage points!")
+            print(f"⚔️ You strike {self.enemy_name} for {dmg} damage!")
         
         elif choice == "2":
-            if not self.player.unlocked_skills:
-                print("⚠️ System Notification: You possess no initialized dynamic skills yet. Defending instead.")
-                self.player_defense_buff = True
+            if self.player.mana_points >= 20:
+                self.player.mana_points -= 20
+                dmg = self.calculate_damage_output(self.player.base_attack_power * 2, self.enemy_dfn, True)
+                self.enemy_hp -= dmg
+                print(f"💥 You unleash a devastating technique for {dmg} damage!")
             else:
-                print("\nAvailable Special Techniques Matrix:")
-                for index, skill in enumerate(self.player.unlocked_skills):
-                    print(f"{index + 1}) {skill} (Cost: 20 MP / 10 Aura)")
-                
-                skill_choice = input("Select skill number: ").strip()
-                if self.player.mana_points >= 20:
-                    self.player.mana_points -= 20
-                    dmg = self.calculate_damage_output(self.player.base_attack_power * 2, self.enemy_dfn, True)
-                    self.enemy_hp -= dmg
-                    print(f"💥 ANIME AWAKENING SCENE! You unleash {self.player.unlocked_skills[0]} dealing {dmg} obliteration damage!")
-                else:
-                    print("❌ Insufficient magic mana registers! Execution failed. Defending instead.")
-                    self.player_defense_buff = True
+                print("❌ Not enough mana! Defending instead.")
+                self.player_defense_buff = True
 
         elif choice == "3":
             self.player_defense_buff = True
-            print(f"🛡️ {self.player.player_name} enters a heavy defensive parry stance.")
+            print(f"🛡️ {self.player.player_name} takes a defensive stance.")
 
         elif choice == "4":
             if not self.player.inventory_slots:
-                print("❌ Your inventory matrix contains zero usable entities. Striking instead.")
+                print("❌ No items in inventory!")
                 dmg = self.calculate_damage_output(self.player.base_attack_power // 2, self.enemy_dfn)
                 self.enemy_hp -= dmg
             else:
-                print("\nInventory Ingestion System:")
+                print("\nInventory:")
                 for index, item in enumerate(self.player.inventory_slots):
                     print(f"{index + 1}) {item}")
-                item_choice = input("Select item array index to consume: ").strip()
+                item_choice = input("Select item (number): ").strip()
                 
                 try:
                     chosen_idx = int(item_choice) - 1
-                    consumed_item = self.player.inventory_slots.pop(chosen_idx)
-                    if "Shard" in consumed_item or "Potion" in consumed_item:
+                    if 0 <= chosen_idx < len(self.player.inventory_slots):
+                        consumed_item = self.player.inventory_slots.pop(chosen_idx)
                         self.player.health_points = min(self.player.maximum_health_points, self.player.health_points + 60)
-                        print(f"🧪 Consumed {consumed_item}. Recovered 60 Health Points framework parameters.")
+                        print(f"🧪 Used {consumed_item}. Recovered 60 HP!")
                 except:
-                    print("⚠️ Input compilation error. Miscast item, turn forfeit.")
+                    print("⚠️ Invalid selection.")
 
     def execute_enemy_turn(self):
         if self.enemy_hp <= 0:
@@ -226,26 +352,25 @@ class CombatEngine:
         
         if self.player_defense_buff:
             dmg = dmg // 2
-            print("🛡️ Your defensive configuration matrix blocked half the oncoming kinetic values.")
+            print("🛡️ Your defensive stance blocks half the damage!")
 
         self.player.health_points -= dmg
-        print(f"💥 {self.enemy_name} charges forward! Dealt {dmg} damage to your armor arrays.")
+        print(f"💥 {self.enemy_name} attacks for {dmg} damage!")
 
     def process_battle_loop(self):
         while self.battle_active:
             self.execute_player_turn()
             if self.enemy_hp <= 0:
-                print(f"\n✨ VICTORY! {self.enemy_name} was wiped from the active matrix sector.")
+                print(f"\n✨ VICTORY! {self.enemy_name} has been defeated!")
                 self.player.experience_points += self.enemy_xp_reward
-                print(f"🌟 Gained {self.enemy_xp_reward} experience points allocation.")
+                print(f"🌟 Gained {self.enemy_xp_reward} experience points!")
                 self.check_level_up_parameters()
                 self.battle_active = False
                 return True
 
             self.execute_enemy_turn()
             if self.player.health_points <= 0:
-                print("\n💀 CRITICAL COGNITIVE DISCONNECT: Player health dropped to absolute zero.")
-                print("The apocalyptic countdown accelerates. The timeline falls into cosmic static.")
+                print("\n💀 You were defeated...")
                 self.battle_active = False
                 return False
                 
@@ -259,7 +384,7 @@ class CombatEngine:
             self.player.update_stats()
             self.player.health_points = self.player.maximum_health_points
             self.player.mana_points = self.player.maximum_mana_points
-            print(f"🎉 LEVEL UP MATRIX EVOLUTION! {self.player.player_name} reached Level {self.player.current_level}!")
+            print(f"🎉 LEVEL UP! {self.player.player_name} reached Level {self.player.current_level}!")
 
 class HubInterface:
     def __init__(self, player, world_context):
@@ -268,30 +393,27 @@ class HubInterface:
 
     def show_dashboard(self):
         print("\n" + "="*70)
-        print(f" MASTER HUD INTERFACE | ACT: {self.context.current_act} | WORLD STABILITY: {self.context.world_stability_index}%")
-        print(f" COUNTDOWN UNTIL TOTAL TIMELINE COLLAPSE: {self.context.cataclysm_countdown_hours} HOURS")
+        print(f" MASTER HUB | ACT: {self.context.current_act} | WORLD STABILITY: {self.context.world_stability_index:.1f}%")
+        print(f" ⏱️  CATACLYSM COUNTDOWN: {self.context.cataclysm_countdown_hours} HOURS")
         print("="*70)
-        print(f" Hero Unit: {self.player.player_name} | Archetype Vector: {self.player.chosen_class}")
-        print(f" Level: {self.player.current_level} | EXP Pool: {self.player.experience_points}/{self.player.next_level_experience}")
-        print(f" Structural HP: {self.player.health_points}/{self.player.maximum_health_points} | MP Capacity: {self.player.mana_points}/{self.player.maximum_mana_points}")
-        print(f" Armed Core: {self.player.equipped_weapon} | Carried Shell: {self.player.equipped_armor}")
+        print(f" 🧑 Hero: {self.player.player_name} | 📊 Class: {self.player.chosen_class}")
+        print(f" 📈 Level: {self.player.current_level} | ⚡ EXP: {self.player.experience_points}/{self.player.next_level_experience}")
+        print(f" ❤️  HP: {self.player.health_points}/{self.player.maximum_health_points} | 💙 MP: {self.player.mana_points}/{self.player.maximum_mana_points}")
+        print(f" 🗡️  Weapon: {self.player.equipped_weapon} | 🛡️  Armor: {self.player.equipped_armor}")
         print("-"*70)
-        print("Navigation System Matrix Directives:")
-        print("1) Initiate Spatial Warp to Active Danger Sectors")
-        print("2) Initialize Dialogue Communications Protocol with Local NPCs")
-        print("3) Access Item Satchel Manifest and Gear Allocations")
-        print("4) Run Local Automated Systems Infrastructure Diagnostics")
-        print("5) Terminate Connection and Exit Game Engine")
+        print("1) Explore World Map")
+        print("2) View Character")
+        print("3) Inventory")
+        print("4) System Status")
+        print("5) Exit Game")
         
-        return input("Select directive index sequence: ").strip()
+        return input("Select option (1-5): ").strip()
 
 # ============================================================================
 # PART 4: QUEST AND NARRATIVE SYSTEMS
 # ============================================================================
 
 class QuestManager:
-    """Manages all quests, objectives, and narrative progression"""
-    
     def __init__(self):
         self.quests = {}
         self.active_quests = []
@@ -301,7 +423,6 @@ class QuestManager:
         self.story_flags = {}
     
     def register_quest(self, quest_id, title, description, objective_type, reward_xp, reward_gold, quest_giver):
-        """Register a new quest into the system"""
         self.quests[quest_id] = {
             "id": quest_id,
             "title": title,
@@ -316,7 +437,6 @@ class QuestManager:
         }
     
     def accept_quest(self, player, quest_id):
-        """Player accepts a quest"""
         if quest_id not in self.quests:
             return False
         
@@ -326,105 +446,39 @@ class QuestManager:
             self.active_quests.append(quest_id)
             return True
         return False
-    
-    def update_quest_progress(self, quest_id, progress_amount):
-        """Update progress on active quest"""
-        if quest_id in self.quests:
-            self.quests[quest_id]["progress"] = min(
-                self.quests[quest_id]["progress"] + progress_amount,
-                self.quests[quest_id]["completion_requirement"]
-            )
-            return self.quests[quest_id]["progress"]
-        return 0
-    
-    def complete_quest(self, player, quest_id):
-        """Mark quest as complete and grant rewards"""
-        if quest_id not in self.quests:
-            return None
-        
-        quest = self.quests[quest_id]
-        if quest["progress"] >= quest["completion_requirement"]:
-            player.quest_flags[quest_id]["status"] = "completed"
-            self.completed_quests.append(quest_id)
-            if quest_id in self.active_quests:
-                self.active_quests.remove(quest_id)
-            
-            rewards = {
-                "experience": quest["reward_xp"],
-                "gold": quest["reward_gold"]
-            }
-            return rewards
-        return None
 
 class NPCSystem:
-    """Manages NPC interactions, dialogue trees, and relationships"""
-    
     def __init__(self):
         self.npcs = {}
         self.npc_relationships = {}
-        self.dialogue_trees = {}
-        self.npc_locations = {}
     
     def register_npc(self, npc_id, name, role, personality, location_zone):
-        """Register a new NPC into the world"""
         self.npcs[npc_id] = {
             "id": npc_id,
             "name": name,
             "role": role,
             "personality": personality,
             "location": location_zone,
-            "relationship_level": 0,
-            "has_quest": False,
-            "quest_id": None
+            "relationship_level": 0
         }
         self.npc_relationships[npc_id] = {"favor": 0, "interactions": 0}
-    
-    def interact_with_npc(self, npc_id, choice):
-        """Execute NPC interaction and track relationship"""
-        if npc_id not in self.npcs:
-            return None
-        
-        npc = self.npcs[npc_id]
-        self.npc_relationships[npc_id]["interactions"] += 1
-        self.npc_relationships[npc_id]["favor"] += 1
-        
-        return {
-            "npc": npc["name"],
-            "interaction": self.npc_relationships[npc_id]["interactions"],
-            "favor_level": self.npc_relationships[npc_id]["favor"]
-        }
 
 class CataclysmSystem:
-    """Manages the apocalyptic countdown and world threat mechanics"""
-    
     def __init__(self, game_context):
         self.game_context = game_context
         self.cataclysm_stages = [
-            {"stage": 1, "hours": 24, "world_corruption": 0.2, "description": "Initial Rifts Open"},
-            {"stage": 2, "hours": 18, "world_corruption": 0.35, "description": "Corrupted Zones Expand"},
-            {"stage": 3, "hours": 12, "world_corruption": 0.5, "description": "Magic Destabilizes"},
-            {"stage": 4, "hours": 6, "world_corruption": 0.75, "description": "Cities Fall"},
-            {"stage": 5, "hours": 0, "world_corruption": 1.0, "description": "World Consumed"}
+            {"stage": 1, "hours": 24, "corruption": 0.0, "description": "Peaceful Era"},
+            {"stage": 2, "hours": 18, "corruption": 0.2, "description": "Rifts Begin to Open"},
+            {"stage": 3, "hours": 12, "corruption": 0.4, "description": "Zones Under Threat"},
+            {"stage": 4, "hours": 6, "corruption": 0.7, "description": "World Falling"},
+            {"stage": 5, "hours": 0, "corruption": 1.0, "description": "Apocalypse"}
         ]
         self.current_stage = 1
         self.time_remaining = 24
     
     def update_cataclysm_countdown(self, hours_passed):
-        """Advance cataclysm timer"""
         self.time_remaining -= hours_passed
         self.game_context.cataclysm_countdown_hours = max(self.time_remaining, 0)
-        self._check_stage_advancement()
-    
-    def _check_stage_advancement(self):
-        """Transition to next cataclysm stage"""
-        for stage_data in self.cataclysm_stages:
-            if self.time_remaining <= stage_data["hours"] and self.current_stage < stage_data["stage"]:
-                self.current_stage = stage_data["stage"]
-                self.game_context.world_stability_index = (1.0 - stage_data["world_corruption"]) * 100
-    
-    def get_stage_description(self):
-        """Get current cataclysm stage narrative"""
-        return self.cataclysm_stages[self.current_stage - 1]["description"]
 
 # ============================================================================
 # MAIN GAME INITIALIZATION AND LOOP
@@ -439,9 +493,9 @@ def initialize_game():
     logger.log_info("Initializing player data structure...")
     
     player = PlayerDataStructure()
-    player.player_name = input("\n[SYSTEM] Enter your hero designation: ").strip() or "DefaultHero"
+    player.player_name = input("\n🎭 Enter your hero name: ").strip() or "RedSuitHero"
     
-    print("\n[CLASS SELECTION MATRIX]")
+    print("\n[CLASS SELECTION]")
     print("1) Warrior (High ATK, High DEF)")
     print("2) Mage (High MP, High ATK)")
     print("3) Rogue (High Speed, High Crit)")
@@ -460,13 +514,14 @@ def initialize_game():
         player.chosen_class = "Rogue"
         player.speed_stat = 30
         player.crit_chance = 0.15
+    else:
+        player.chosen_class = "Warrior"
     
     player.update_stats()
+    logger.log_info(f"Hero {player.player_name} ({player.chosen_class}) registered!")
     
-    logger.log_info(f"Hero {player.player_name} ({player.chosen_class}) registered successfully!")
-    
-    # Initialize game systems
-    item_registry = ItemRegistry()
+    # Initialize all game systems
+    pixel_world = PixelWorld(20, 15)
     enemy_registry = EnemyRegistry()
     zone_registry = ZoneRegistry()
     quest_manager = QuestManager()
@@ -474,29 +529,65 @@ def initialize_game():
     cataclysm = CataclysmSystem(game_context)
     hub = HubInterface(player, game_context)
     
-    logger.log_info("Loading enemy registry templates...")
+    # Register enemies
     enemy_registry.register_enemy("ENM_001", "Corrupted Sprite", 1, 30, 10, 5, 25)
     enemy_registry.register_enemy("ENM_002", "Dark Wraith", 3, 60, 18, 10, 75)
     enemy_registry.register_enemy("ENM_003", "Abyssal Guardian", 5, 100, 28, 15, 150)
     
-    logger.log_info("Loading zone registry...")
-    zone_registry.register_zone("ZONE_001", "Shattered Forests", 2, "Nature", "A forest twisted by corruption")
-    zone_registry.register_zone("ZONE_002", "Forsaken Citadel", 4, "Darkness", "An ancient fortress has fallen")
-    
-    logger.log_info("Loading quest registry...")
-    quest_manager.register_quest("Q001", "Save the Village", "Defeat corrupted beasts terrorizing the village", "combat", 500, 100, "Elder Sage")
-    quest_manager.register_quest("Q002", "Retrieve Crystal Shards", "Find 5 crystal shards scattered across zones", "collection", 300, 50, "Mage Guild Master")
-    
-    logger.log_info("Loading NPC registry...")
-    npc_system.register_npc("NPC_001", "Elder Sage", "Quest Giver", "Wise", "Village Center")
-    npc_system.register_npc("NPC_002", "Mage Guild Master", "Trainer", "Scholarly", "Magic Tower")
-    
-    logger.log_info("System initialization complete! World stability at 100%")
     game_context.system_ready = True
+    logger.log_info("Game systems initialized. Ready for adventure!")
     
-    return game_context, player, logger, enemy_registry, zone_registry, quest_manager, npc_system, cataclysm, hub
+    return game_context, player, logger, pixel_world, enemy_registry, hub, cataclysm
 
-def main_game_loop(game_context, player, logger, enemy_registry, zone_registry, quest_manager, npc_system, cataclysm, hub):
+def exploration_mode(player, pixel_world, enemy_registry, hub):
+    """Interactive exploration and movement mode"""
+    exploring = True
+    
+    while exploring:
+        pixel_world.draw()
+        print(pixel_world.get_terrain_description())
+        print("\nMovement Controls:")
+        print("  W/↑ = Up    |  S/↓ = Down  |  A/← = Left  |  D/→ = Right")
+        print("  V = View Character  |  L = Look Around  |  X = Exit Exploration")
+        
+        action = input("\nAction: ").strip().lower()
+        
+        if action in ("w", "s", "a", "d", "↑", "↓", "←", "→"):
+            if pixel_world.move(action):
+                print(f"\n✨ {player.player_name} moved in the {action} direction!")
+                print(pixel_world.get_terrain_description())
+                
+                # Random encounter
+                if random.random() < 0.3:
+                    print("\n⚠️ A wild enemy appears!")
+                    enemy_id = random.choice(list(enemy_registry.enemies.keys()))
+                    enemy_data = enemy_registry.enemies[enemy_id].copy()
+                    combat = CombatEngine(player, enemy_data)
+                    victory = combat.process_battle_loop()
+                    
+                    if not victory:
+                        return False
+                    
+                    input("\nPress Enter to continue exploring...")
+        
+        elif action == "v":
+            CharacterVisualizer.display_character_full(player)
+            input("Press Enter to continue...")
+        
+        elif action == "l":
+            print(f"\n👀 {player.player_name} looks around carefully...")
+            print(pixel_world.get_terrain_description())
+        
+        elif action == "x":
+            print(f"🚪 {player.player_name} returns to the hub.")
+            exploring = False
+        
+        else:
+            print("⚠️ Unknown command. Use W/A/S/D to move, V to view character, or X to exit.")
+    
+    return True
+
+def main_game_loop(game_context, player, logger, pixel_world, enemy_registry, hub, cataclysm):
     """Main game loop"""
     
     while game_context.is_running:
@@ -506,75 +597,61 @@ def main_game_loop(game_context, player, logger, enemy_registry, zone_registry, 
         choice = hub.show_dashboard()
         
         if choice == "1":
-            print("\n[SPATIAL WARP INITIATED]")
-            print("Available Danger Sectors:")
-            for zone_id, zone_data in zone_registry.zones.items():
-                print(f"  > {zone_data['name']} (Danger: {zone_data['danger']}/5)")
+            print("\n🗺️  Entering Exploration Mode...")
+            time.sleep(1)
+            alive = exploration_mode(player, pixel_world, enemy_registry, hub)
             
-            zone_choice = input("Select zone (or press Enter to return): ").strip()
-            if zone_choice:
-                # Start combat with random enemy
-                enemy_id = random.choice(list(enemy_registry.enemies.keys()))
-                enemy_data = enemy_registry.enemies[enemy_id].copy()
-                
-                print(f"\n⚠️ A wild {enemy_data['name']} (Lv.{enemy_data['level']}) appears!")
-                combat = CombatEngine(player, enemy_data)
-                victory = combat.process_battle_loop()
-                
-                if not victory:
-                    print("\n[GAME OVER] Your timeline has concluded.")
-                    game_context.is_running = False
-                else:
-                    cataclysm.update_cataclysm_countdown(1)
-                    print(f"\nWorld Corruption Status: {100 - game_context.world_stability_index}%")
-                    print(f"Time Remaining: {game_context.cataclysm_countdown_hours} hours")
+            if not alive:
+                print("\n[GAME OVER] Your adventure has ended...")
+                game_context.is_running = False
         
         elif choice == "2":
-            print("\n[DIALOGUE MATRIX ACTIVATED]")
-            print("Available NPCs:")
-            for npc_id, npc_data in npc_system.npcs.items():
-                print(f"  > {npc_data['name']} ({npc_data['role']}) - {npc_data['location']}")
-            
-            npc_choice = input("Select NPC (or press Enter to return): ").strip()
-            if npc_choice:
-                result = npc_system.interact_with_npc(f"NPC_{int(npc_choice):03d}", "greeting")
-                if result:
-                    print(f"\n{result['npc']}: 'Greetings, traveler. We meet again...'")
-                    print(f"Favor Level: {result['favor_level']}")
+            CharacterVisualizer.display_character_full(player)
+            input("Press Enter to continue...")
         
         elif choice == "3":
-            print("\n[INVENTORY INTERFACE]")
-            print(f"Current Items: {len(player.inventory_slots)}")
+            print("\n📦 INVENTORY")
+            print("="*40)
             if player.inventory_slots:
                 for i, item in enumerate(player.inventory_slots, 1):
                     print(f"  {i}) {item}")
             else:
                 print("  (Empty)")
+            print("="*40)
             input("Press Enter to continue...")
         
         elif choice == "4":
-            print("\n[SYSTEM DIAGNOSTICS]")
+            print("\n🔧 SYSTEM STATUS")
+            print("="*40)
             print(f"Hero Status: {player.player_name} Lv.{player.current_level}")
             print(f"Health: {player.health_points}/{player.maximum_health_points}")
-            print(f"Active Quests: {len(quest_manager.active_quests)}")
-            print(f"Cataclysm Stage: {cataclysm.get_stage_description()}")
+            print(f"Cataclysm Stage: Stage {cataclysm.current_stage}")
+            print(f"Time Remaining: {game_context.cataclysm_countdown_hours} hours")
+            print("="*40)
             input("Press Enter to continue...")
         
         elif choice == "5":
-            print("\n[SYSTEM SHUTDOWN INITIATED]")
-            print("Thank you for playing Anime Chronicles: World Salvation!")
+            print("\n👋 Thank you for playing Anime Chronicles!")
+            print("Saving game data...")
+            time.sleep(1)
             game_context.is_running = False
         
         else:
-            print("⚠️ Invalid selection. Please try again.")
+            print("⚠️ Invalid selection.")
 
 def main():
     """Main entry point"""
     try:
-        game_context, player, logger, enemy_registry, zone_registry, quest_manager, npc_system, cataclysm, hub = initialize_game()
-        main_game_loop(game_context, player, logger, enemy_registry, zone_registry, quest_manager, npc_system, cataclysm, hub)
+        game_context, player, logger, pixel_world, enemy_registry, hub, cataclysm = initialize_game()
+        
+        CharacterVisualizer.display_character_full(player)
+        print("🎬 Your adventure begins...\n")
+        time.sleep(2)
+        
+        main_game_loop(game_context, player, logger, pixel_world, enemy_registry, hub, cataclysm)
+    
     except KeyboardInterrupt:
-        print("\n\n[SYSTEM] Game interrupted by user. Shutting down...")
+        print("\n\n[SYSTEM] Game interrupted. Shutting down...")
     except Exception as e:
         print(f"\n[CRITICAL ERROR] {str(e)}")
         import traceback
